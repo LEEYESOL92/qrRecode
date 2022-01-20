@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/services.dart';
+import 'package:innerview_biz/mainPages/videoPage.dart';
 
 class QuestionRecode extends StatefulWidget {
   final String question;
@@ -13,75 +13,75 @@ class QuestionRecode extends StatefulWidget {
 }
 
 class _QuestionRecodeState extends State<QuestionRecode> {
-  CameraController? _cameraController;
-  Future<void>? _initCameraControllerFuture;
-  int cameraIndex = 1;
-
-  bool isCapture = false;
-  File? captureImage;
+  bool _isLoading = true;
+  bool _isRecording = false;
+  late CameraController _cameraController;
 
   @override
   void initState() {
-    // SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft]);
-    super.initState();
     _initCamera();
-  }
-
-  Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-
-    _cameraController =
-        new CameraController(cameras[cameraIndex], ResolutionPreset.medium);
-    _initCameraControllerFuture = _cameraController!.initialize();
+    super.initState();
   }
 
   @override
   void dispose() {
-    // _cameraController!.dispose();
+    _cameraController.dispose();
     super.dispose();
+  }
+
+  _initCamera() async {
+    final cameras = await availableCameras();
+    final front = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front);
+    _cameraController = CameraController(front, ResolutionPreset.max);
+    await _cameraController.initialize();
+    setState(() => _isLoading = false);
+  }
+
+  _recordVideo() async {
+    if (_isRecording) {
+      final file = await _cameraController.stopVideoRecording();
+      setState(() => _isRecording = false);
+      final route = MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => VideoPage(filePath: file.path),
+      );
+      Navigator.push(context, route);
+    } else {
+      await _cameraController.prepareForVideoRecording();
+      await _cameraController.startVideoRecording();
+      setState(() => _isRecording = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Scaffold(
-      body: Center(
-        child: FutureBuilder<void>(
-          future: _initCameraControllerFuture,
-          builder: (BuildContext context, AsyncSnapshot snapshot) {
-            print(snapshot.connectionState);
-            print('11111111111111111');
-            if (snapshot.connectionState == ConnectionState.done) {
-              return Stack(
-                children: <Widget>[
-                  Container(
-                      height: double.infinity,
-                      width: double.infinity,
-                      child: CameraPreview(_cameraController!)),
-                  Container(
-                    height: 50.0,
-                    width: 50.0,
-                    padding: const EdgeInsets.all(1.0),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 1.0),
-                      color: Colors.white,
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 3.0),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              return Center(child: CircularProgressIndicator());
-            }
-          },
+    if (_isLoading) {
+      return Container(
+        color: Colors.white,
+        child: const Center(
+          child: CircularProgressIndicator(),
         ),
-      ),
-    );
+      );
+    } else {
+      return Center(
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            CameraPreview(_cameraController),
+            Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Container(
+                  alignment: Alignment.centerRight,
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.red,
+                    child: Icon(_isRecording ? Icons.stop : Icons.circle),
+                    onPressed: () => _recordVideo(),
+                  ),
+                )),
+          ],
+        ),
+      );
+    }
   }
 }
