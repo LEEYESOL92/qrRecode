@@ -39,7 +39,7 @@ class _QuestionListState extends State<QuestionList> {
               child: CircleAvatar(child: Text('$idx')),
             ),
             title: Text(data),
-            trailing: Icon(Icons.camera_indoor_outlined),
+            // trailing: Icon(Icons.camera_indoor_outlined),
             onTap: () {
               Get.to(QuestionRecode(
                 question: data,
