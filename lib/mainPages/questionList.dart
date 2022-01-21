@@ -23,7 +23,7 @@ class _QuestionListState extends State<QuestionList> {
 
   questionData() {
     _questionList = widget.question;
-    print(widget.question);
+    // print(widget.question);
   }
 
   @override
