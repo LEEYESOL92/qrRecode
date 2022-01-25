@@ -1,9 +1,14 @@
 // import 'dart:html';
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:innerview_biz/mainPages/videoPage.dart';
+import 'package:innerview_biz/mainPages/recodePlayer.dart';
+import 'package:path_provider/path_provider.dart';
 
 class QuestionRecode extends StatefulWidget {
   final String question;
@@ -45,19 +50,19 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     setState(() => _isLoading = false);
   }
 
-  _recordVideo() async {
+  _recordVideo(status) async {
     if (_isRecording) {
       final file = await _cameraController.stopVideoRecording();
       setState(() => _isRecording = false);
-      _showDialog();
-      // final route = MaterialPageRoute(
-      //   fullscreenDialog: true,
-      //   builder: (_) => VideoPage(filePath: file.path),
-      // );
+
+      if (status == 'timeover') {
+        _showDialog(file.path);
+      } else {
+        Get.off(VideoPage(filePath: file.path));
+      }
 
       _isRunning = !_isRunning;
       _pause();
-
       // Navigator.push(context, route);
     } else {
       _isRunning = !_isRunning;
@@ -65,7 +70,6 @@ class _QuestionRecodeState extends State<QuestionRecode> {
       await _cameraController.prepareForVideoRecording();
       await _cameraController.startVideoRecording();
       _start();
-
       setState(() => _isRecording = true);
     }
   }
@@ -73,7 +77,7 @@ class _QuestionRecodeState extends State<QuestionRecode> {
   void _start() {
     _timer = Timer.periodic(Duration(milliseconds: 10), (timer) {
       if (_timeCount == 300) {
-        _recordVideo();
+        _recordVideo('timeover');
       }
       setState(() {
         _timeCount++;
@@ -82,6 +86,7 @@ class _QuestionRecodeState extends State<QuestionRecode> {
   }
 
   void _pause() {
+    // _cameraController.takePicture(filePath);
     _timer.cancel();
     _timeCount = 0;
   }
@@ -99,7 +104,7 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  void _showDialog() {
+  void _showDialog(filePath) {
     Get.defaultDialog(
       title: "",
       content: Text('-분이 넘었습니다.\n 촬영을 종료합니다.'),
@@ -108,7 +113,8 @@ class _QuestionRecodeState extends State<QuestionRecode> {
       actions: <Widget>[
         FlatButton(
             onPressed: () {
-              Get.back();
+              // Get.off(VideoPage(filePath: filePath));
+              Get.off(RecodePlayer(filePath: filePath));
             },
             child: Text('영상확인하기')),
         FlatButton(
@@ -137,9 +143,6 @@ class _QuestionRecodeState extends State<QuestionRecode> {
             children: <Widget>[
               CameraPreview(_cameraController),
               Container(
-                //   child: Center(
-                // child: Image.asset('images/camera_guide.jpg'),
-                // ),
                 child: cameraGuide(),
               ),
               Container(child: timerView()),
@@ -150,7 +153,7 @@ class _QuestionRecodeState extends State<QuestionRecode> {
                   child: FloatingActionButton(
                     backgroundColor: Colors.red,
                     child: Icon(_isRecording ? Icons.stop : Icons.circle),
-                    onPressed: () => _recordVideo(),
+                    onPressed: () => _recordVideo('stop'),
                   ),
                 ),
               ),
