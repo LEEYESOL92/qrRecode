@@ -1,18 +1,16 @@
-// import 'dart:html';
-
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/painting.dart';
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:innerview_biz/mainPages/videoPage.dart';
 import 'package:innerview_biz/mainPages/recodePlayer.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:gallery_saver/gallery_saver.dart';
+import 'package:flutter/services.dart';
+import 'package:io/ansi.dart';
 
 class QuestionRecode extends StatefulWidget {
-  final String question;
   QuestionRecode({Key? key, required this.question}) : super(key: key);
+  final question;
 
   @override
   _QuestionRecodeState createState() => _QuestionRecodeState();
@@ -21,16 +19,20 @@ class QuestionRecode extends StatefulWidget {
 class _QuestionRecodeState extends State<QuestionRecode> {
   bool _isLoading = true;
   bool _isRecording = false;
-
-  bool _isRunning = false;
-
   late Timer _timer;
   int _timeCount = 0;
+
+/***************/
+  String questionSet = "";
+  int? timeout;
+/***************/
   late CameraController _cameraController;
 
   @override
   void initState() {
+    SystemChrome.setEnabledSystemUIOverlays([]);
     _initCamera();
+    questionDataSetting();
     super.initState();
   }
 
@@ -50,33 +52,40 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     setState(() => _isLoading = false);
   }
 
+  questionDataSetting() {
+    questionSet = widget.question['question'];
+    timeout = widget.question['timeout'] * 3600;
+  }
+
   _recordVideo(status) async {
     if (_isRecording) {
       final file = await _cameraController.stopVideoRecording();
       setState(() => _isRecording = false);
+      _pause();
+
+      GallerySaver.saveVideo(file.path)
+          .then((value) => print('갤러리저장완료!'))
+          .catchError((err) {
+        print('저장에러!');
+      });
 
       if (status == 'timeover') {
         _showDialog(file.path);
       } else {
-        Get.off(VideoPage(filePath: file.path));
+        Get.off(RecodePlayer(filePath: file.path));
       }
-
-      _isRunning = !_isRunning;
-      _pause();
-      // Navigator.push(context, route);
     } else {
-      _isRunning = !_isRunning;
-
       await _cameraController.prepareForVideoRecording();
       await _cameraController.startVideoRecording();
-      _start();
+
       setState(() => _isRecording = true);
+      _start();
     }
   }
 
-  void _start() {
-    _timer = Timer.periodic(Duration(milliseconds: 10), (timer) {
-      if (_timeCount == 300) {
+  _start() {
+    _timer = Timer.periodic(const Duration(milliseconds: 10), (timer) {
+      if (_timeCount == timeout) {
         _recordVideo('timeover');
       }
       setState(() {
@@ -85,15 +94,14 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     });
   }
 
-  void _pause() {
-    // _cameraController.takePicture(filePath);
+  _pause() {
     _timer.cancel();
     _timeCount = 0;
   }
 
-  void showSnackBar(BuildContext context) {
+  showSnackBar(BuildContext context) {
     final snackBar = SnackBar(
-      content: Text(widget.question),
+      content: Text(questionSet),
       backgroundColor: Colors.teal,
       action: SnackBarAction(
         label: 'X',
@@ -104,24 +112,24 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  void _showDialog(filePath) {
+  _showDialog(filePath) {
     Get.defaultDialog(
       title: "",
-      content: Text('-분이 넘었습니다.\n 촬영을 종료합니다.'),
+      content: const Text('-분이 넘었습니다.\n 촬영을 종료합니다.'),
       barrierDismissible: false,
       radius: 20.0,
       actions: <Widget>[
         FlatButton(
             onPressed: () {
               // Get.off(VideoPage(filePath: filePath));
-              Get.off(RecodePlayer(filePath: filePath));
+              Get.offAll(RecodePlayer(filePath: filePath));
             },
-            child: Text('영상확인하기')),
+            child: const Text('영상확인하기')),
         FlatButton(
             onPressed: () {
               Get.back();
             },
-            child: Text('다시 촬영하기')),
+            child: const Text('다시 촬영하기')),
       ],
     );
   }
@@ -142,29 +150,22 @@ class _QuestionRecodeState extends State<QuestionRecode> {
             alignment: Alignment.bottomCenter,
             children: <Widget>[
               CameraPreview(_cameraController),
-              Container(
-                child: cameraGuide(),
-              ),
+              CameraGuide(),
               Container(child: timerView()),
-              Padding(
-                padding: EdgeInsets.all(10.0),
-                child: Container(
-                  alignment: Alignment.centerRight,
-                  child: FloatingActionButton(
-                    backgroundColor: Colors.red,
-                    child: Icon(_isRecording ? Icons.stop : Icons.circle),
-                    onPressed: () => _recordVideo('stop'),
-                  ),
+              Container(
+                alignment: Alignment.centerRight,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.red,
+                  child: Icon(_isRecording ? Icons.stop : Icons.circle),
+                  onPressed: () => _recordVideo('stop'),
+                  // onPressed: () => {},
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(10, 0, 0, 10),
-                child: Container(
-                  alignment: Alignment.bottomLeft,
-                  child: IconButton(
-                    onPressed: () => {showSnackBar(context)},
-                    icon: Icon(Icons.info_outline),
-                  ),
+              Container(
+                alignment: Alignment.bottomLeft,
+                child: IconButton(
+                  onPressed: () => {showSnackBar(context)},
+                  icon: const Icon(Icons.info_outline),
                 ),
               ),
             ],
@@ -175,14 +176,13 @@ class _QuestionRecodeState extends State<QuestionRecode> {
   }
 
   Widget timerView() {
-    // String secs = milliseconds ~/ 1000;
     String minutes = (_timeCount ~/ 3600).toString().padLeft(2, '0');
     String seconds = ((_timeCount % 3600) ~/ 60).toString().padLeft(2, '0');
     String secs = (_timeCount % 60).toString().padLeft(2, '0');
 
     return Center(
       child: Padding(
-        padding: EdgeInsets.only(top: 30.0),
+        padding: const EdgeInsets.only(top: 30.0),
         child: Stack(
           children: <Widget>[
             Column(
@@ -191,10 +191,10 @@ class _QuestionRecodeState extends State<QuestionRecode> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
-                    Text('$minutes' + ':' + '$seconds' + ':' + '$secs',
-                        style: TextStyle(
+                    Text('$minutes' ':' '$seconds' ':' '$secs',
+                        style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15.0,
+                            fontSize: 17.0,
                             backgroundColor: Colors.red)),
                   ],
                 )
@@ -206,21 +206,20 @@ class _QuestionRecodeState extends State<QuestionRecode> {
     );
   }
 
-  Widget cameraGuide() {
+  Widget CameraGuide() {
     return Center(
-      child: Container(
-        height: 200.0,
-        width: 200.0,
-        child: Column(
-          children: <Widget>[
-            Icon(
-              Icons.mood_rounded,
-              size: 184.0,
+      child: _isRecording
+          ? const SizedBox.shrink()
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const <Widget>[
+                Icon(
+                  Icons.mood_rounded,
+                  size: 184.0,
+                ),
+                Text('영역에 맞춰 촬영해주세요')
+              ],
             ),
-            Text('영역에 맞춰 촬영해주세요')
-          ],
-        ),
-      ),
     );
   }
 }
