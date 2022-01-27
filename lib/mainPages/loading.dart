@@ -31,13 +31,6 @@ class _LodingPageState extends State<LodingPage> {
             child: Image.asset('images/logo.jpg'),
           )),
           SizedBox(height: 50.0),
-          // TextButton.icon(
-          //     // onPressed: () {
-          //     //   Get.toNamed('/qrScan');
-          //     // },
-          //     onPressed: () => _scan(),
-          //     icon: Icon(Icons.qr_code_scanner_outlined),
-          //     label: Text('기업정보 QRScan'))
         ],
       ),
     ));

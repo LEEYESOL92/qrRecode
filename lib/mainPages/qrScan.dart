@@ -17,7 +17,6 @@ class QRScan extends StatelessWidget {
         children: <Widget>[
           TextButton.icon(
               onPressed: () => _scan(),
-              // onPressed: () {},
               icon: Icon(Icons.qr_code_scanner_outlined),
               label: Text('기업정보 QRScan'))
         ],
@@ -40,16 +39,11 @@ class QRScan extends StatelessWidget {
   Future _scan() async {
     await _getStatuses();
     //스캔 시작 - 이때 스캔 될때까지 blocking
-    String? barcode = await scanner.scan();
-    if (barcode != null) {
+    String? scanData = await scanner.scan();
+    if (scanData != null) {
       Get.offAll(QRScanInfo(
-        qrData: barcode,
+        qrData: scanData,
       ));
-
-      // Get.toNamed('/question', arguments: barcode);
-      // print(barcode);
     }
-    //스캔 완료하면 _output 에 문자열 저장하면서 상태 변경 요청.
-    // setState(() => _output = barcode!);
   }
 }

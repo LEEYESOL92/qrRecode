@@ -56,10 +56,6 @@ class CompanyInfo extends StatelessWidget {
                 ],
               ),
             ),
-            // children: <Widget>[
-            //   for (int i = 0; i < this.company['applywork'].length; i++)
-            //     Text('123123' + this.company['applywork'][i])
-            // ],
           )
         ],
       ),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
+import 'dart:async';
+import 'package:innerview_biz/mainPages/util/volume.dart';
+import 'package:flutter/services.dart';
 
 class RecodePlayer extends StatefulWidget {
   final String filePath;
@@ -14,20 +16,25 @@ class RecodePlayer extends StatefulWidget {
 
 class _RecodePlayerState extends State<RecodePlayer> {
   late VideoPlayerController _videoPlayerController;
+  late int maxVol, currentVol;
+
   String VideoUrl = "";
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIOverlays([]);
     _initVideoPlayer();
   }
 
   Future _initVideoPlayer() async {
-    print("1?????????????????????");
-    print(widget.filePath);
-
     _videoPlayerController = VideoPlayerController.file(File(widget.filePath));
-    await _videoPlayerController.initialize().then((_) => setState(() {}));
+    // await _videoPlayerController.initialize().then((_) => setState(() {}));
+    _videoPlayerController.addListener(() {
+      setState(() {});
+    });
     await _videoPlayerController.setLooping(false);
+
+    _videoPlayerController.initialize();
     VideoUrl = widget.filePath;
   }
 
@@ -38,33 +45,33 @@ class _RecodePlayerState extends State<RecodePlayer> {
   }
 
   Widget build(BuildContext context) {
-    return Scaffold(
-        extendBodyBehindAppBar: true,
-        body: FutureBuilder(builder: (context, state) {
-          if (state.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            return AspectRatio(
-                aspectRatio: _videoPlayerController.value.aspectRatio,
-                child: Stack(
-                  children: <Widget>[
-                    VideoPlayer(_videoPlayerController),
-                    _ControlsOverlay(controller: _videoPlayerController),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: VideoProgressIndicator(_videoPlayerController,
-                          allowScrubbing: true),
-                    ),
-                    uploadButton(
-                      controller: _videoPlayerController,
-                    )
-                    // Align(
-                    //     alignment: Alignment.topRight,
-                    //     child: Icon(Icons.upload, size: 50)),
-                  ],
-                ));
-          }
-        }));
+    return Scaffold(body: FutureBuilder(builder: (context, state) {
+      if (state.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      } else {
+        return AspectRatio(
+            aspectRatio: _videoPlayerController.value.aspectRatio,
+            child: Stack(
+              children: <Widget>[
+                VideoPlayer(_videoPlayerController),
+                _ControlsOverlay(controller: _videoPlayerController),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: VideoProgressIndicator(_videoPlayerController,
+                      allowScrubbing: true),
+                ),
+                Volume(),
+                uploadButton(
+                  controller: _videoPlayerController,
+                ),
+
+                // Align(
+                //     alignment: Alignment.topRight,
+                //     child: Icon(Icons.upload, size: 50)),
+              ],
+            ));
+      }
+    }));
   }
 }
 

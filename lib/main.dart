@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:innerview_biz/mainPages/loading.dart';
 import 'package:innerview_biz/mainPages/qrScan.dart';
+import 'package:flutter/services.dart';
 // import 'package:innerview_biz/mainPages/questionList.dart';
 
 void main() {
